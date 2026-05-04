@@ -1,6 +1,6 @@
-# Claude Wiki — Schema & Workflows
+# Law School LLM Wiki — Schema & Workflows
 
-This is the schema file for a Claude-maintained knowledge wiki. It defines the
+This is the schema file for a law school knowledge wiki maintained by Claude Code. It defines the
 directory layout, page conventions, and workflows that Claude follows to build
 and maintain this wiki. Read this file at the start of every session.
 
@@ -21,7 +21,7 @@ and maintain this wiki. Read this file at the start of every session.
 ## Directory Layout
 
 ```
-claude-wiki/
+law-school-llm-wiki/
 ├── CLAUDE.md                  ← this file (schema & instructions)
 ├── raw/                       ← IMMUTABLE source documents — read only, never modify
 │   ├── extracted/             ← pre-extracted .txt versions of all sources (READ HERE FIRST)
@@ -45,7 +45,9 @@ claude-wiki/
 > `studies/`. The workflows below reference these generically — just keep the
 > names consistent with your page types.
 
-**Rule**: Never modify anything under `raw/`. All wiki content lives under `wiki/`.
+**Rule**: Never modify anything under `raw/` — **except `raw/extracted/`**, where
+Claude saves extracted text on first ingest. Original source files in `raw/notes/`,
+`raw/articles/`, and `raw/papers/` are immutable. All wiki content lives under `wiki/`.
 
 ---
 
@@ -88,35 +90,35 @@ reference the page. This is what makes Obsidian backlinks work.
 > **Edit these templates to match your domain.** Each page type should have
 > a defined structure so pages are consistent and comparable.
 
-### Course / Topic Pages
+### Course Pages
 
-Each course or topic page should include:
-- Topic info (scope, context, timeframe)
-- High-level outline of subtopics covered
-- Key concepts taught (wikilinked to concept pages)
-- Key examples or cases (wikilinked)
-- Summary or checklist if present in the source
+Each course page should include:
+- Course info (professor, semester, year)
+- High-level outline of topics covered
+- Key doctrines taught (wikilinked to doctrine pages)
+- Key cases covered (wikilinked to case pages)
+- Exam approach / checklist if present in the notes
 
-### Concept / Doctrine Pages
+### Doctrine Pages
 
-Each concept page should include:
-- Definition / core statement
-- Elements or components (numbered list)
+Each doctrine page should include:
+- Definition / rule statement
+- Elements (numbered list)
 - Exceptions and edge cases
-- Rationale or motivation
-- Key examples illustrating the concept (wikilinked)
-- Which topics cover this (wikilinked)
+- Policy rationale
+- Key cases illustrating the doctrine (wikilinked)
+- Which courses cover this (wikilinked)
 
-### Case / Example Pages
+### Case Pages
 
-Each case or example page should include:
-- Source and attribution
-- Context (brief)
-- Key question or issue
-- Answer or finding
-- Rule or principle it demonstrates
+Each case page should include:
+- Citation and court
+- Facts (brief)
+- Issue
+- Holding
+- Rule / doctrine it stands for
 - Significance / why it matters
-- Which topics reference it (wikilinked)
+- Which courses reference it (wikilinked)
 
 ### Statute / Reference Pages
 
@@ -124,8 +126,8 @@ Each reference page should include:
 - Full citation or identifier
 - Summary of content
 - Key provisions or sections
-- Related concepts (wikilinked)
-- Which topics reference it (wikilinked)
+- Related doctrines (wikilinked)
+- Which courses reference it (wikilinked)
 
 ---
 
@@ -133,18 +135,25 @@ Each reference page should include:
 
 When the user asks Claude to ingest a source from `raw/`:
 
+0. **Check `wiki/log.md` first.** If an `ingest-complete` entry already exists
+   for this source path, tell the user it's already been ingested and ask if
+   they want to re-ingest (which will update existing pages with a fresh read).
+   If an `ingest-start` exists without a matching `ingest-complete`, the previous
+   ingest was interrupted — resume from where it left off.
 1. **Read** the source. **Always check `raw/extracted/` first** — pre-extracted
-   `.txt` versions are stored there and are much faster to read. Only fall back
-   to PDF or Word parsing if no `.txt` counterpart exists.
+   `.txt` versions are stored there and are much faster to read. If no `.txt`
+   counterpart exists, read the original file and **save the extracted text
+   to `raw/extracted/<filename>.txt`** so future ingests are faster.
    Write `ingest-start` to `wiki/log.md` before doing anything else.
 2. **Discuss** key takeaways with the user if they want — what subjects are
    covered, what concepts are central.
-3. **Write or update topic pages** — a summary page for the source's main topic.
-4. **Update concept pages** — for each significant concept in the source:
-   open the relevant page (create if missing), integrate definitions,
-   components, exceptions, and examples.
-5. **Update example/case pages** — for significant cases or examples cited:
-   open the relevant page (create if missing), fill in the template fields.
+3. **Write or update `wiki/courses/<slug>.md`** — a course summary page.
+4. **Update doctrine pages** — for each significant doctrine in the source:
+   open `wiki/doctrines/<slug>.md` (create if missing), integrate definitions,
+   elements, exceptions, and cases.
+5. **Update case pages** — for significant cases cited:
+   open `wiki/cases/<slug>.md` (create if missing), fill in
+   facts/holding/rule.
 6. **Update `wiki/overview.md`** if the source adds a new subject area or
    meaningfully changes the synthesis.
 7. **Update `wiki/index.md`** — add newly created pages to the catalog.
@@ -155,18 +164,23 @@ When the user asks Claude to ingest a source from `raw/`:
 
 1. **`raw/extracted/<filename>.txt`** — use the Read tool directly. Fast and preferred.
 2. **`raw/notes/<filename>.pdf`** — use the Read tool with `pages` parameter
-   if no `.txt` exists.
-3. **`raw/notes/<filename>.docx`** — use python-docx only as a last resort:
+   if no `.txt` exists. After reading, save extracted text to
+   `raw/extracted/<filename>.txt` for next time.
+3. **`raw/notes/<filename>.docx`** — use python-docx as a last resort:
 
 ```python
 from docx import Document
 doc = Document('raw/notes/filename.docx')
 text = '\n'.join([p.text for p in doc.paragraphs])
 print(text)
+# Save to raw/extracted/ for future ingests
+with open('raw/extracted/filename.txt', 'w') as f:
+    f.write(text)
 ```
 
 The `raw/extracted/` directory mirrors `raw/notes/` with the same base filenames
-(`.docx` → `.txt`, `.pdf` → `.txt`).
+(`.docx` → `.txt`, `.pdf` → `.txt`). Claude creates these automatically on
+first ingest if they don't exist.
 
 ---
 
@@ -248,11 +262,12 @@ Entries are append-only — never delete or edit past entries.
 
 ## Notes
 
-- **Prefer updating existing concept pages** over creating new ones. Many
-  sources cover the same concepts — build up one authoritative page per
-  concept rather than duplicating across topics.
-- **Summaries and checklists are gold.** If a source has a summary, checklist,
-  or decision framework, extract it prominently into the topic page and
-  the relevant concept pages.
-- **Cross-source connections matter.** When a concept appears in multiple
-  sources, note the cross-reference on the concept page.
+- **Prefer updating existing doctrine pages** over creating new ones. Many
+  courses cover the same doctrines — build up one authoritative page per
+  doctrine rather than duplicating across courses.
+- **Exam checklists are gold.** If a source has an issue-spotting checklist
+  or exam approach, extract it prominently into the course page and the
+  relevant doctrine pages.
+- **Cross-course connections matter.** When a doctrine appears in multiple
+  courses (e.g. consideration in Contracts I and II), note the cross-reference
+  on the doctrine page.
