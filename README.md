@@ -4,6 +4,10 @@ An AI-maintained law school knowledge base powered by [Claude Code](https://docs
 
 Drop in your course outlines, case briefs, and class notes. Claude reads, extracts, and builds a structured, cross-referenced wiki — one authoritative page per doctrine, one per case — with Obsidian-compatible wikilinks throughout.
 
+![How it works: sources in raw/ (outlines, case briefs, notes) flow into Claude Code, which reads, extracts concepts, and cross-links them into a structured wiki of doctrine/case/course pages; each new source re-extracts and re-links so the wiki compounds — unlike RAG, which re-retrieves fragments per question](assets/how-it-works.png)
+
+See a generated result in the [**example wiki**](https://github.com/legalrealist/law-school-llm-wiki-example) ([live site](https://legalrealist.github.io/law-school-llm-wiki-example/)).
+
 ## The idea
 
 Most people's experience with LLMs and documents is RAG: upload files, ask a question, the model retrieves chunks and generates an answer. Nothing accumulates. Ask a subtle question that requires synthesizing five outlines, and the LLM has to find and piece together fragments every time.
